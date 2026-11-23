@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HD Racing - Catálogo Oficial | Motos, Accesorios e Indumentaria</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Catálogo online oficial de HD Racing. Consultá disponibilidad de stock en tiempo real de motos, cascos, indumentaria, accesorios Wirtz y repuestos. Pedidos y consultas directas por WhatsApp.">
+    <meta name="keywords" content="hd racing, motos, indumentaria moto, cascos wirtz, accesorios cross, repuestos motos, corrientes, equipamiento motero, lubricantes motul">
+    <meta name="author" content="HD Racing">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/jpeg" href="hd-racing-logo.jpg">
+    
+    <!-- Google Fonts: Outfit (Titulares deportivos) e Inter (Cuerpo y datos) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:ital,wght@0,400;0,600;0,700;0,800;0,900;1,700;1,900&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Core Stylesheet -->
+    <link rel="stylesheet" href="style.css?v=1.0.0">
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header class="main-header">
+        <div class="header-container">
+            <a href="#" class="brand-link">
+                <div class="logo-area">
+                    <img src="hd-racing-logo.jpg" alt="HD Racing Logo" class="header-brand-img">
+                    <div class="logo-text-group">
+                        <div class="brand-title-wrap">
+                            <span class="logo-hd">HD</span>
+                            <span class="logo-racing">racing</span>
+                            <span class="logo-reg">®</span>
+                        </div>
+                        <div class="brand-sub-wrap">
+                            <span class="logo-sub">MOTOS · ACCESORIOS · INDUMENTARIA</span>
+                        </div>
+                    </div>
+                </div>
+            </a>
+            
+            <nav class="header-nav">
+                <a href="#catalogo" class="nav-link">Catálogo</a>
+                <a href="#categorias" class="nav-link">Categorías</a>
+                <a href="#contacto" class="nav-link">Contacto</a>
+            </nav>
+            
+            <div class="header-actions">
+                <div class="store-status-pill">
+                    <span class="pulse-dot"></span>
+                    <span class="status-text">Abierto</span>
+                </div>
+                
+                <button class="cart-toggle-btn" id="cart-toggle" onclick="toggleCart()" aria-label="Ver carrito de compras">
+                    <i data-lucide="shopping-bag"></i>
+                    <span class="cart-badge" id="cart-count">0</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-bg-glow hero-glow-red"></div>
+        <div class="hero-bg-glow hero-glow-dark"></div>
+        <div class="hero-track-lines"></div>
+
+        <div class="hero-container">
+            <div class="hero-content">
+                <div class="motto-tag">
+                    <span class="tag-glow-dot"></span>
+                    <span>DISCIPLINA · MOTOR · LIBERTAD · PASIÓN</span>
+                </div>
+                
+                <h1 class="hero-title">
+                    Pasión por las dos ruedas <br>
+                    <span class="gradient-text">Equipamiento & Repuestos Pro</span>
+                </h1>
+                
+                <p class="hero-description">
+                    Explorá nuestro catálogo con <strong>disponibilidad de stock en tiempo real</strong>. 
+                    Seleccioná tu indumentaria, accesorios y repuestos para armar tu pedido o consultar directamente por WhatsApp.
+                </p>
+                
+                <div class="hero-actions">
+                    <a href="#catalogo" class="btn btn-primary btn-large">
+                        <i data-lucide="compass"></i>
+                        <span>Explorar Catálogo</span>
+                    </a>
+                    <a href="#contacto" class="btn btn-secondary btn-large">
+                        <i data-lucide="map-pin"></i>
+                        <span>Ubicación y Horarios</span>
+                    </a>
+                </div>
+
+                <div class="hero-stats-row">
+                    <div class="stat-item">
+                        <span class="stat-number">100%</span>
+                        <span class="stat-label">Stock Sincronizado</span>
+                    </div>
+                    <div class="stat-divider"></div>
+                    <div class="stat-item">
+                        <span class="stat-number">TOP</span>
+                        <span class="stat-label">Marcas Oficiales</span>
+                    </div>
+                    <div class="stat-divider"></div>
+                    <div class="stat-item">
+                        <span class="stat-number">DIRECTO</span>
+                        <span class="stat-label">Atención WhatsApp</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="hero-visual">
+                <div class="hero-emblem-card">
+                    <div class="emblem-outer-ring"></div>
+                    <div class="emblem-inner-ring"></div>
+                    <img src="hd-racing-logo.jpg" alt="HD Racing Oficial" class="hero-emblem-image">
+                    <div class="emblem-badge-floating">
+                        <i data-lucide="shield-check"></i>
+                        <span>Catálogo Oficial</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hero Feature Pillars -->
+        <div class="hero-features-bar">
+            <div class="feature-item">
+                <div class="feature-icon-box">
+                    <i data-lucide="refresh-cw"></i>
+                </div>
+                <div class="feature-text">
+                    <h4>Stock en Vivo</h4>
+                    <p>Visualizá qué productos están disponibles al instante</p>
+                </div>
+            </div>
+            
+            <div class="feature-item">
+                <div class="feature-icon-box">
+                    <i data-lucide="message-circle"></i>
+                </div>
+                <div class="feature-text">
+                    <h4>Pedido Fácil por WhatsApp</h4>
+                    <p>Armá tu lista y envianos tu consulta en un solo clic</p>
+                </div>
+            </div>
+            
+            <div class="feature-item">
+                <div class="feature-icon-box">
+                    <i data-lucide="credit-card"></i>
+                </div>
+                <div class="feature-text">
+                    <h4>Pagos & Transferencias</h4>
+                    <p>Efectivo en local y Transferencia bancaria o Alias MP</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Catalog Section -->
+    <main class="catalog-section" id="catalogo">
+        <div class="section-container">
+            <div class="catalog-header-area">
+                <div class="catalog-title-group">
+                    <span class="section-eyebrow">CATÁLOGO EN LÍNEA</span>
+                    <h2 class="section-title">Productos & Disponibilidad</h2>
+                    <p class="section-subtitle">Encontrá indumentaria, protecciones, accesorios deportivos y repuestos para tu moto</p>
+                </div>
+
+                <!-- Wholesale Discount Banner -->
+                <div class="wholesale-callout">
+                    <div class="callout-icon">
+                        <i data-lucide="zap"></i>
+                    </div>
+                    <div class="callout-content">
+                        <strong>¡Precios Especiales por Cantidad!</strong>
+                        <span>Llevando 5 o más unidades de un mismo producto se aplica automáticamente el precio mayorista.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search and Filter Controls -->
+            <div class="search-filter-card" id="categorias">
+                <div class="search-input-wrap">
+                    <i data-lucide="search" class="search-icon"></i>
+                    <input 
+                        type="text" 
+                        id="catalog-search" 
+                        placeholder="Buscar por producto, marca (Wirtz, Motul, DID), SKU o repuesto..." 
+                        oninput="filterCatalog()"
+                        autocomplete="off"
+                    >
+                    <button id="search-clear-btn" class="search-clear-btn" onclick="clearSearch()" style="display:none;" aria-label="Limpiar búsqueda">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
+                
+                <div class="filter-controls-row">
+                    <label class="stock-filter-switch">
+                        <input type="checkbox" id="filter-stock" onchange="filterCatalog()">
+                        <span class="switch-slider"></span>
+                        <span class="switch-label">Solo productos con stock disponible</span>
+                    </label>
+
+                    <div class="catalog-counter" id="products-counter">
+                        Mostrando productos...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category Pills Navigation -->
+            <div class="categories-nav-wrapper">
+                <div class="categories-nav" id="category-tabs">
+                    <!-- Categorías inyectadas dinámicamente por app.js -->
+                </div>
+            </div>
+
+            <!-- Products Grid -->
+            <div class="products-grid" id="products-grid">
+                <!-- Render dinámico desde app.js -->
+                <div class="grid-loading">
+                    <div class="spinner"></div>
+                    <p>Cargando catálogo de HD Racing...</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Slide-out Shopping Cart Drawer -->
+    <div class="cart-drawer-overlay" id="cart-overlay" onclick="toggleCart()"></div>
+    <div class="cart-drawer" id="cart-drawer" role="dialog" aria-labelledby="cart-title">
+        <div class="cart-drawer-header">
+            <div class="cart-header-title-wrap">
+                <i data-lucide="shopping-bag" class="cart-header-icon"></i>
+                <h3 class="cart-drawer-title" id="cart-title">Mi Pedido</h3>
+            </div>
+            <button class="btn-close-drawer" onclick="toggleCart()" aria-label="Cerrar pedido">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        
+        <div class="cart-drawer-content">
+            <!-- Cart Items List -->
+            <div class="cart-items-list" id="cart-items-list">
+                <!-- Loaded dynamically by JS -->
+                <div class="cart-empty-state">
+                    <div class="empty-icon-circle">
+                        <i data-lucide="shopping-bag"></i>
+                    </div>
+                    <p class="empty-title">Tu lista está vacía</p>
+                    <p class="empty-text">Navegá por el catálogo y agregá los productos que te gustaría consultar o comprar.</p>
+                    <a href="#catalogo" class="btn btn-secondary" onclick="toggleCart()">Ver Catálogo</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="cart-drawer-footer">
+            <div class="cart-summary-box">
+                <div class="cart-summary-row">
+                    <span class="summary-label">Total de Artículos:</span>
+                    <span id="cart-items-total-qty" class="summary-value">0</span>
+                </div>
+                <div class="cart-summary-row total-row">
+                    <span class="summary-label">Total Estimado:</span>
+                    <span class="total-price" id="cart-total-price">$0.00</span>
+                </div>
+            </div>
+
+            <!-- Payment Method Selector -->
+            <div class="payment-method-selector">
+                <span class="payment-selector-title">Preferencia de Pago:</span>
+                <div class="payment-options-grid">
+                    <label class="payment-option-pill active" id="pay-option-cash" onclick="selectPaymentMethod('cash')">
+                        <input type="radio" name="payment-method" value="cash" checked style="display:none;">
+                        <i data-lucide="banknote"></i>
+                        <span>Efectivo / Local</span>
+                    </label>
+                    <label class="payment-option-pill" id="pay-option-qr" onclick="selectPaymentMethod('qr')">
+                        <input type="radio" name="payment-method" value="qr" style="display:none;">
+                        <i data-lucide="smartphone"></i>
+                        <span>Transferencia / Alias</span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Button to open Transfer Info Modal (Visible when transfer is selected) -->
+            <button class="btn btn-secondary btn-full-width btn-transfer-info" id="btn-view-qr" style="display: none;" onclick="openQRModal()">
+                <i data-lucide="info"></i>
+                <span>Ver Datos de Transferencia & Alias</span>
+            </button>
+
+            <div class="shipping-notice">
+                <i data-lucide="shield-alert"></i>
+                <span>La disponibilidad final y retiro/envío se confirman directamente por WhatsApp.</span>
+            </div>
+
+            <button class="btn btn-primary btn-full-width btn-checkout-wa" id="btn-checkout" onclick="checkoutWhatsApp()">
+                <i data-lucide="message-circle"></i>
+                <span>Enviar Pedido por WhatsApp</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Transfer / QR Payment Modal -->
+    <div class="modal-overlay" id="modal-qr-payment" onclick="closeQRModal(event)">
+        <div class="modal-card modal-qr-card" onclick="event.stopPropagation()">
+            <button class="modal-close-btn" onclick="closeQRModal()" aria-label="Cerrar modal">
+                <i data-lucide="x"></i>
+            </button>
+            <div class="modal-qr-body">
+                <div class="modal-icon-badge">
+                    <i data-lucide="smartphone"></i>
+                </div>
+                <span class="tag-pill-red">MERCADO PAGO & TRANSFERENCIA</span>
+                <h3 class="modal-qr-title">Datos para Transferencia</h3>
+                <p class="modal-qr-subtitle">
+                    Podés realizar tu transferencia desde cualquier banco o billetera virtual (Mercado Pago, Modo, Ualá, etc.).
+                </p>
+                
+                <div class="transfer-data-box">
+                    <div class="data-item">
+                        <span class="data-item-label">Titular de la Cuenta</span>
+                        <strong class="data-item-value" id="modal-display-holder">HD RACING S.R.L.</strong>
+                    </div>
+
+                    <div class="data-item alias-highlight-item">
+                        <span class="data-item-label">Alias de Pago (CBU / CVU)</span>
+                        <div class="alias-copy-row">
+                            <span class="alias-code" id="modal-display-alias">HDRACING.OFICIAL</span>
+                            <button type="button" class="btn btn-copy" id="modal-copy-alias-btn" onclick="copyModalAlias()">
+                                <i data-lucide="copy"></i>
+                                <span id="modal-copy-alias-text">Copiar</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="transfer-steps-card">
+                    <h5>Pasos para completar tu compra:</h5>
+                    <ol>
+                        <li>Copiá el Alias y realizá la transferencia desde tu aplicación.</li>
+                        <li>Guardá el comprobante digital o captura de pantalla.</li>
+                        <li>Tocá el botón abajo para enviar tu pedido por WhatsApp y adjuntar tu comprobante.</li>
+                    </ol>
+                </div>
+                
+                <button type="button" class="btn btn-primary btn-full-width btn-large" onclick="checkoutWhatsApp(); closeQRModal();">
+                    <i data-lucide="message-circle"></i>
+                    <span>Enviar Pedido y Comprobante</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Detail Modal -->
+    <div class="modal-overlay" id="modal-product-detail" onclick="closeProductModal(event)">
+        <div class="modal-card modal-detail-card" onclick="event.stopPropagation()">
+            <button class="modal-close-btn" onclick="closeProductModal()" aria-label="Cerrar detalle">
+                <i data-lucide="x"></i>
+            </button>
+            
+            <div class="modal-detail-layout">
+                <div class="modal-detail-visual">
+                    <div class="detail-image-box" id="modal-image-container">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </div>
+                
+                <div class="modal-detail-info">
+                    <div class="detail-tags-row">
+                        <span class="tag-category" id="modal-product-category">Categoría</span>
+                        <span class="tag-sku" id="modal-product-sku">SKU: ---</span>
+                    </div>
+
+                    <h3 class="modal-detail-title" id="modal-product-title">Nombre del Producto</h3>
+                    
+                    <div class="modal-pricing-box">
+                        <div class="price-retail-block">
+                            <span class="price-caption">Precio Minorista</span>
+                            <span class="price-main" id="modal-product-price">$0.00</span>
+                        </div>
+                        <div class="wholesale-badge-box" id="modal-wholesale-box" style="display: none;">
+                            <!-- Injected if wholesale is present -->
+                        </div>
+                    </div>
+                    
+                    <div class="product-specs-list">
+                        <div class="spec-tile">
+                            <span class="spec-label">Disponibilidad</span>
+                            <span class="spec-value" id="modal-product-stock-status">En Stock</span>
+                        </div>
+                        <div class="spec-tile">
+                            <span class="spec-label">Cantidad en Local</span>
+                            <span class="spec-value" id="modal-product-stock-qty">0 u.</span>
+                        </div>
+                    </div>
+
+                    <div class="detail-description-box" id="modal-product-desc-box">
+                        <h4 class="desc-heading">Descripción del Producto</h4>
+                        <p class="desc-text" id="modal-product-desc"></p>
+                    </div>
+                    
+                    <div class="modal-footer-actions" id="modal-action-row">
+                        <!-- Botones dinámicos: Agregar al carrito o Consultar -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contact & Footer Section -->
+    <footer class="footer-section" id="contacto">
+        <div class="footer-container">
+            <div class="footer-top-grid">
+                <div class="footer-brand-col">
+                    <div class="logo-area">
+                        <img src="hd-racing-logo.jpg" alt="HD Racing" class="footer-brand-img">
+                        <div class="logo-text-group">
+                            <div class="brand-title-wrap">
+                                <span class="logo-hd">HD</span>
+                                <span class="logo-racing">racing</span>
+                            </div>
+                            <span class="logo-sub">MOTOS · ACCESORIOS · INDUMENTARIA</span>
+                        </div>
+                    </div>
+                    <p class="footer-motto-badge">
+                        <span class="pulse-dot"></span>
+                        DISCIPLINA · MOTOR · LIBERTAD · PASIÓN
+                    </p>
+                    <p class="footer-bio">
+                        Tu tienda de referencia en motos, indumentaria y accesorios de competición. 
+                        Asesoramiento personalizado, componentes de máxima resistencia y repuestos oficiales.
+                    </p>
+                </div>
+                
+                <div class="footer-info-col">
+                    <h4 class="footer-heading">Contacto & Ubicación</h4>
+                    <ul class="footer-contact-list">
+                        <li>
+                            <i data-lucide="map-pin"></i>
+                            <span id="footer-address">Av. Independencia 3420, Corrientes Capital, Argentina</span>
+                        </li>
+                        <li>
+                            <i data-lucide="phone"></i>
+                            <span id="footer-phone">+54 9 379 533-1132</span>
+                        </li>
+                        <li>
+                            <i data-lucide="clock"></i>
+                            <span id="footer-hours">Lunes a Sábado: 08:30 a 13:00 y 16:30 a 20:30 hs</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="footer-links-col">
+                    <h4 class="footer-heading">Canales Oficiales</h4>
+                    <p class="footer-sub-text">Seguinos en nuestras redes o escribinos directamente:</p>
+                    <div class="footer-social-row">
+                        <a id="footer-whatsapp-link" href="https://wa.me/5493795331132" target="_blank" rel="noopener" class="social-btn whatsapp-btn" title="Escribir por WhatsApp">
+                            <i data-lucide="message-circle"></i>
+                            <span>WhatsApp</span>
+                        </a>
+                        <a id="footer-instagram-link" href="https://instagram.com/hdracing" target="_blank" rel="noopener" class="social-btn" title="Seguir en Instagram">
+                            <i data-lucide="instagram"></i>
+                            <span>Instagram</span>
+                        </a>
+                    </div>
+                    
+                    <div class="footer-safety-pill">
+                        <i data-lucide="shield-check"></i>
+                        <span>Precios y stock sujetos a confirmación comercial</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer-bottom-row">
+                <p>&copy; 2026 HD Racing. Todos los derechos reservados. Motos, Accesorios e Indumentaria.</p>
+                <div class="footer-badge-tech">
+                    <span>Sistema Integrado HD Racing</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Floating Toast Notification -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- External Libraries (Fuse.js for smart search & Supabase for DB access) -->
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.basic.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Application Logic -->
+    <script src="app.js?v=1.0.0"></script>
+</body>
+</html>
