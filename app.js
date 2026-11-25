@@ -3,9 +3,10 @@
    MOTOS · ACCESORIOS · INDUMENTARIA
    ========================================================================== */
 
-/* Supabase Configuration (Multi-tenant ready) */
+/* Supabase Configuration (Conectado exclusivamente a la tienda HD Racing) */
 const supabaseUrl = "https://wkgxssfbzgahkztdjzmo.supabase.co";
 const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndrZ3hzc2ZiemdhaGt6dGRqem1vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzI4MjcsImV4cCI6MjA5NjA0ODgyN30.BNlE6dOMlbMlERR7ri4c4QIKqVXCJPHcZviTNunku44";
+const HDRACING_STORE_ID = "6c2b4c0e-3e22-411f-9403-94e4b5bad19e"; // Cuenta: hdracing@gmail.com
 let supabaseClient = null;
 
 if (window.supabase && typeof window.supabase.createClient === 'function') {
@@ -90,28 +91,27 @@ function updateStoreStatus() {
    DATA FETCHING (SUPABASE RPC WITH LOCAL JSON FALLBACK)
    ========================================================================== */
 async function fetchCatalog() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const storeId = urlParams.get('store');
-
-    // If an explicit store ID is passed and supabase is available, try Supabase RPC
-    if (storeId && supabaseClient) {
+    if (supabaseClient) {
         try {
-            console.log(`Intentando conectar con Supabase para tienda: ${storeId}`);
+            console.log(`Conectando con Supabase para la tienda HD Racing (${HDRACING_STORE_ID})...`);
             const { data: catalogData, error } = await supabaseClient.rpc('get_public_catalog', {
-                target_store_id: storeId
+                target_store_id: HDRACING_STORE_ID
             });
 
-            if (!error && catalogData && catalogData.products) {
+            if (!error && catalogData) {
                 console.log("Catálogo cargado con éxito desde Supabase:", catalogData);
                 populateCatalogData(catalogData);
                 return;
+            }
+            if (error) {
+                console.warn("Error RPC Supabase, usando catálogo local de respaldo:", error);
             }
         } catch (err) {
             console.warn("Fallo RPC Supabase, usando catálogo local de respaldo:", err);
         }
     }
 
-    // Default: Load local catalog for HD Racing
+    // Respaldo local si Supabase no está disponible
     await fetchLocalFallback();
 }
 
@@ -139,10 +139,16 @@ async function fetchLocalFallback() {
 }
 
 function populateCatalogData(data) {
-    state.products = data.products || [];
-    state.categories = data.categories || [];
-    if (data.settings) {
-        state.settings = { ...state.settings, ...data.settings };
+    state.products = Array.isArray(data.products) ? data.products : [];
+    state.categories = Array.isArray(data.categories) ? data.categories : [];
+    if (data.settings && typeof data.settings === 'object') {
+        Object.entries(data.settings).forEach(([key, value]) => {
+            if (value === undefined || value === null || String(value).trim() === '') return;
+            // Ignore uncustomized DHMotopartes POS template defaults
+            if (key === 'storeAlias' && String(value).trim().toUpperCase() === 'DHMOTOPARTES') return;
+            if (key === 'storeHolder' && String(value).trim().toUpperCase() === 'DANIEL OSCAR HIDALGO') return;
+            state.settings[key] = value;
+        });
     }
 
     // Apply settings to DOM elements
@@ -165,8 +171,8 @@ function populateCatalogData(data) {
         });
     }
 
-    // Render initial product cards
-    renderCatalog();
+    // Render initial product cards and update counter
+    filterCatalog();
     updateCartUI();
 }
 
@@ -187,13 +193,26 @@ function applySettingsToUI() {
     if (s.whatsapp) {
         const waLink = document.getElementById('footer-whatsapp-link');
         if (waLink) {
-            const cleanNum = s.whatsapp.replace(/[^0-9]/g, '');
-            waLink.href = `https://wa.me/${cleanNum}`;
+            const wa = String(s.whatsapp).trim();
+            if (wa.startsWith('http://') || wa.startsWith('https://')) {
+                waLink.href = wa;
+            } else {
+                const cleanNum = wa.replace(/[^0-9]/g, '');
+                if (cleanNum) waLink.href = `https://wa.me/${cleanNum}`;
+            }
         }
     }
     if (s.instagram) {
         const igLink = document.getElementById('footer-instagram-link');
-        if (igLink) igLink.href = s.instagram;
+        if (igLink) {
+            const ig = String(s.instagram).trim();
+            if (ig.startsWith('http://') || ig.startsWith('https://')) {
+                igLink.href = ig;
+            } else {
+                const username = ig.replace(/^@/, '');
+                if (username) igLink.href = `https://instagram.com/${username}`;
+            }
+        }
     }
     if (s.storeHolder) {
         const holderEl = document.getElementById('modal-display-holder');
@@ -212,7 +231,7 @@ function renderCategoryTabs() {
     const tabsContainer = document.getElementById('category-tabs');
     if (!tabsContainer) return;
 
-    // Build unique categories list
+    // Build unique categories list (only categories with products)
     const categoriesSet = new Set(state.categories);
     state.products.forEach(p => {
         if (p.category) categoriesSet.add(p.category);
@@ -229,12 +248,14 @@ function renderCategoryTabs() {
 
     categoriesList.forEach(cat => {
         const count = state.products.filter(p => p.category === cat).length;
-        html += `
-            <button class="category-tab-btn" onclick="setCategory('${escapeAttr(cat)}', this)">
-                <span>${cat}</span>
-                <span style="opacity: 0.6; font-size: 11.5px;">(${count})</span>
-            </button>
-        `;
+        if (count > 0) {
+            html += `
+                <button class="category-tab-btn" onclick="setCategory('${escapeAttr(cat)}', this)">
+                    <span>${cat}</span>
+                    <span style="opacity: 0.6; font-size: 11.5px;">(${count})</span>
+                </button>
+            `;
+        }
     });
 
     tabsContainer.innerHTML = html;
@@ -325,14 +346,24 @@ function renderCatalog(itemsToRender = null) {
     const products = itemsToRender !== null ? itemsToRender : state.products;
 
     if (products.length === 0) {
-        grid.innerHTML = `
-            <div class="grid-loading">
-                <i data-lucide="package-search" style="width: 48px; height: 48px; margin: 0 auto 12px; display: block; color: var(--text-muted);"></i>
-                <p style="font-size: 16px; font-weight: 700; color: #ffffff;">No encontramos productos con ese criterio</p>
-                <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">Probá modificando la búsqueda o quitando los filtros de categoría.</p>
-                <button class="btn btn-secondary" style="margin-top: 16px;" onclick="resetAllFilters()">Restablecer filtros</button>
-            </div>
-        `;
+        if (state.products.length === 0) {
+            grid.innerHTML = `
+                <div class="grid-loading">
+                    <i data-lucide="package" style="width: 48px; height: 48px; margin: 0 auto 12px; display: block; color: var(--text-muted);"></i>
+                    <p style="font-size: 16px; font-weight: 700; color: #ffffff;">Catálogo en preparación</p>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">Todavía no hay productos publicados en esta tienda. Consultanos directamente por WhatsApp.</p>
+                </div>
+            `;
+        } else {
+            grid.innerHTML = `
+                <div class="grid-loading">
+                    <i data-lucide="package-search" style="width: 48px; height: 48px; margin: 0 auto 12px; display: block; color: var(--text-muted);"></i>
+                    <p style="font-size: 16px; font-weight: 700; color: #ffffff;">No encontramos productos con ese criterio</p>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">Probá modificando la búsqueda o quitando los filtros de categoría.</p>
+                    <button class="btn btn-secondary" style="margin-top: 16px;" onclick="resetAllFilters()">Restablecer filtros</button>
+                </div>
+            `;
+        }
         if (window.lucide) lucide.createIcons();
         return;
     }

@@ -19,8 +19,8 @@ Plataforma web oficial para la visualización del catálogo de productos y dispo
   - Modal de datos de transferencia con un clic para copiar el Alias (`HDRACING.OFICIAL`).
 - **Checkout Directo por WhatsApp**: Genera automáticamente un mensaje estructurado y prolijo con los productos, SKUs, totales y forma de pago para confirmar directamente con el equipo de ventas.
 - **Doble Modo de Operación**:
-  - **Modo Supabase RPC**: Compatible con el backend SaaS multi-tienda de DH Motopartes (`?store=<store_id>`).
-  - **Modo Local JSON (`hdracing_db.json`)**: Funcionamiento 100% autónomo y veloz para despliegue estático inmediato en Vercel.
+  - **Modo Supabase RPC**: Conectado directamente a la tienda de HD Racing (`hdracing@gmail.com`) en el backend SaaS de DH Motopartes mediante `get_public_catalog`.
+  - **Modo Local JSON (`hdracing_db.json`)**: Respaldo automático local si Supabase no está disponible.
 
 ---
 
