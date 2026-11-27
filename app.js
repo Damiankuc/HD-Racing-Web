@@ -109,6 +109,31 @@ function parseOpeningHours(text) {
     return { days, ranges };
 }
 
+// Día y hora actuales en Argentina (la tienda), sin importar dónde esté quien visita la web.
+const STORE_TIME_ZONE = 'America/Argentina/Buenos_Aires';
+function getStoreLocalTime(date = new Date()) {
+    try {
+        const parts = new Intl.DateTimeFormat('en-US', {
+            timeZone: STORE_TIME_ZONE,
+            weekday: 'short',
+            hour: '2-digit',
+            minute: '2-digit',
+            hourCycle: 'h23'
+        }).formatToParts(date);
+        const get = (type) => (parts.find(p => p.type === type) || {}).value;
+        const days = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+        const day = days[get('weekday')];
+        const hour = parseInt(get('hour'), 10) % 24;
+        const minute = parseInt(get('minute'), 10);
+        if (day !== undefined && !isNaN(hour) && !isNaN(minute)) {
+            return { day, timeVal: hour + minute / 60 };
+        }
+    } catch (e) {
+        console.warn('No se pudo calcular la hora de Argentina, se usa la del dispositivo:', e);
+    }
+    return { day: date.getDay(), timeVal: date.getHours() + date.getMinutes() / 60 };
+}
+
 function updateStoreStatus() {
     const statusPill = document.querySelector('.store-status-pill');
     if (!statusPill) return;
@@ -121,9 +146,7 @@ function updateStoreStatus() {
     statusPill.hidden = false;
 
     const statusText = statusPill.querySelector('.status-text');
-    const now = new Date();
-    const day = now.getDay(); // 0 is Sunday
-    const timeVal = now.getHours() + (now.getMinutes() / 60);
+    const { day, timeVal } = getStoreLocalTime();
 
     const isOpen = schedule.days.includes(day) && schedule.ranges.some(([from, to]) => timeVal >= from && timeVal < to);
 
