@@ -16,7 +16,9 @@ Plataforma web oficial para la visualización del catálogo de productos y dispo
   - Selector de cantidades con validación automática contra stock físico.
   - Detección de **Precios Mayoristas** automáticos al llevar 5 o más unidades.
   - Selección de método de pago preferido: **Efectivo / Local** o **Transferencia / Alias**.
-  - Modal de datos de transferencia con un clic para copiar el Alias (`HDRACING.OFICIAL`).
+  - Modal de datos de transferencia con un clic para copiar el Alias y Titular cargados en Configuración del sistema.
+- **Talles y Colores**: Los productos con variantes (cargadas en el sistema con stock por combinación) muestran selector de talle/color; el pedido de WhatsApp incluye la combinación elegida.
+- **Datos de contacto desde el sistema**: Teléfono, WhatsApp, Instagram, dirección, horario y descripción se leen de Configuración; si un dato está vacío, se oculta.
 - **Checkout Directo por WhatsApp**: Genera automáticamente un mensaje estructurado y prolijo con los productos, SKUs, totales y forma de pago para confirmar directamente con el equipo de ventas.
 - **Doble Modo de Operación**:
   - **Modo Supabase RPC**: Conectado directamente a la tienda de HD Racing (`hdracing@gmail.com`) en el backend SaaS de DH Motopartes mediante `get_public_catalog`.

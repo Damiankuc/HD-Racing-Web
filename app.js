@@ -19,24 +19,31 @@ if (window.supabase && typeof window.supabase.createClient === 'function') {
 const state = {
     products: [],
     categories: [],
+    // Los datos de contacto y pago (teléfono, WhatsApp, Instagram, dirección, horario,
+    // alias, titular, descripción) vienen SIEMPRE de Configuración del sistema.
+    // Si un dato está vacío en el sistema, la web lo oculta en lugar de inventarlo.
     settings: {
         storeName: 'HD RACING',
         storeSlogan: 'MOTOS | ACCESORIOS | INDUMENTARIA',
-        currency: '$',
-        whatsapp: '+5493795331132',
-        storeAlias: 'HDRACING.OFICIAL',
-        storeHolder: 'HD RACING S.R.L.',
-        storeAddress: 'Av. Independencia 3420, Corrientes Capital, Argentina',
-        storePhone: '+54 9 379 533-1132'
+        currency: '$'
     },
     cart: [],
     paymentMethod: 'cash' // 'cash' or 'qr'
+};
+
+// Valores de plantilla del sistema que no son datos reales de HD Racing
+const TEMPLATE_PLACEHOLDER_VALUES = {
+    storeAlias: ['DHMOTOPARTES'],
+    storeHolder: ['DANIEL OSCAR HIDALGO'],
+    storeAddress: ['AV. LIBERTADOR 2450, CIUDAD'],
+    storePhone: ['+54 9 11 5555-1234']
 };
 
 let activeCategory = '';
 let fuseInstance = null;
 let modalCurrentProduct = null;
 let modalSelectedQty = 1;
+let modalSelection = { size: '', color: '' };
 
 /* ==========================================================================
    INITIALIZATION
@@ -61,22 +68,64 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ==========================================================================
    STORE STATUS (BUSINESS HOURS)
    ========================================================================== */
+/**
+ * Interpreta el "Horario de Atención" cargado en el sistema, por ejemplo:
+ *   "Lunes a Sábado: 08:30 a 13:00 y 16:30 a 20:30 hs"
+ *   "Lunes a Viernes 9 a 18"
+ * Devuelve { days: [0..6], ranges: [[desde, hasta], ...] } o null si no se entiende.
+ */
+function parseOpeningHours(text) {
+    if (!text) return null;
+    const norm = String(text).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+    const ranges = [];
+    const rangeRe = /(\d{1,2})(?:[:.](\d{2}))?\s*(?:hs?\.?)?\s*(?:a|-|–|hasta)\s*(\d{1,2})(?:[:.](\d{2}))?/g;
+    let m;
+    while ((m = rangeRe.exec(norm)) !== null) {
+        const from = parseInt(m[1], 10) + (parseInt(m[2] || '0', 10) / 60);
+        const to = parseInt(m[3], 10) + (parseInt(m[4] || '0', 10) / 60);
+        if (from >= 0 && from < 24 && to > 0 && to <= 24 && to > from) ranges.push([from, to]);
+    }
+    if (ranges.length === 0) return null;
+
+    const dayIdx = { domingo: 0, lunes: 1, martes: 2, miercoles: 3, jueves: 4, viernes: 5, sabado: 6 };
+    let days = null;
+    if (/todos los dias|lunes a domingo/.test(norm)) {
+        days = [0, 1, 2, 3, 4, 5, 6];
+    } else {
+        const span = norm.match(/(domingo|lunes|martes|miercoles|jueves|viernes|sabado)\s*(?:a|-|al)\s*(domingo|lunes|martes|miercoles|jueves|viernes|sabado)/);
+        if (span) {
+            days = [];
+            let d = dayIdx[span[1]];
+            const end = dayIdx[span[2]];
+            for (let i = 0; i < 7; i++) {
+                days.push(d);
+                if (d === end) break;
+                d = (d + 1) % 7;
+            }
+        }
+    }
+    if (!days) return null; // sin días claros no se muestra Abierto/Cerrado
+    return { days, ranges };
+}
+
 function updateStoreStatus() {
     const statusPill = document.querySelector('.store-status-pill');
     if (!statusPill) return;
 
+    const schedule = parseOpeningHours(state.settings.openingHours);
+    if (!schedule) {
+        statusPill.hidden = true;
+        return;
+    }
+    statusPill.hidden = false;
+
     const statusText = statusPill.querySelector('.status-text');
     const now = new Date();
     const day = now.getDay(); // 0 is Sunday
-    const hour = now.getHours();
-    const minute = now.getMinutes();
-    const timeVal = hour + (minute / 60);
+    const timeVal = now.getHours() + (now.getMinutes() / 60);
 
-    // Open Mon-Sat: 08:30 to 13:00 and 16:30 to 20:30
-    const isWeekdayOrSat = day >= 1 && day <= 6;
-    const isMorningShift = timeVal >= 8.5 && timeVal < 13.0;
-    const isEveningShift = timeVal >= 16.5 && timeVal < 20.5;
-    const isOpen = isWeekdayOrSat && (isMorningShift || isEveningShift);
+    const isOpen = schedule.days.includes(day) && schedule.ranges.some(([from, to]) => timeVal >= from && timeVal < to);
 
     if (isOpen) {
         statusPill.classList.remove('closed');
@@ -121,7 +170,8 @@ async function fetchLocalFallback() {
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
         console.log("Catálogo local cargado correctamente:", data);
-        populateCatalogData(data);
+        // El respaldo local NO aporta datos de contacto/pago: esos solo vienen del sistema
+        populateCatalogData({ ...data, settings: {} });
     } catch (err) {
         console.error("Error cargando base de datos local:", err);
         const grid = document.getElementById('products-grid');
@@ -144,15 +194,16 @@ function populateCatalogData(data) {
     if (data.settings && typeof data.settings === 'object') {
         Object.entries(data.settings).forEach(([key, value]) => {
             if (value === undefined || value === null || String(value).trim() === '') return;
-            // Ignore uncustomized DHMotopartes POS template defaults
-            if (key === 'storeAlias' && String(value).trim().toUpperCase() === 'DHMOTOPARTES') return;
-            if (key === 'storeHolder' && String(value).trim().toUpperCase() === 'DANIEL OSCAR HIDALGO') return;
-            state.settings[key] = value;
+            // Ignorar valores de plantilla del sistema que no se personalizaron
+            const placeholders = TEMPLATE_PLACEHOLDER_VALUES[key];
+            if (placeholders && placeholders.includes(String(value).trim().toUpperCase())) return;
+            state.settings[key] = typeof value === 'string' ? value.trim() : value;
         });
     }
 
     // Apply settings to DOM elements
     applySettingsToUI();
+    updateStoreStatus();
 
     // Render category filters
     renderCategoryTabs();
@@ -176,52 +227,130 @@ function populateCatalogData(data) {
     updateCartUI();
 }
 
+/**
+ * Número de WhatsApp (solo dígitos) a partir de lo cargado en el sistema.
+ * Acepta "+54 9 379 ...", "https://wa.me/549...", "https://api.whatsapp.com/send?phone=549...".
+ * Si no hay WhatsApp, usa el teléfono de contacto. Devuelve '' si no hay ninguno.
+ */
+function getWhatsAppNumber() {
+    const raw = String(state.settings.whatsapp || '').trim();
+    if (raw) {
+        const fromUrl = raw.match(/(?:wa\.me\/|phone=)\+?(\d{6,})/i);
+        if (fromUrl) return fromUrl[1];
+        if (!/^https?:\/\//i.test(raw)) {
+            const digits = raw.replace(/[^0-9]/g, '');
+            if (digits.length >= 6) return digits;
+        }
+    }
+    const phoneDigits = String(state.settings.storePhone || '').replace(/[^0-9]/g, '');
+    return phoneDigits.length >= 6 ? phoneDigits : '';
+}
+
+function getWhatsAppLink() {
+    const raw = String(state.settings.whatsapp || '').trim();
+    if (/^https?:\/\//i.test(raw)) return raw; // link completo cargado en el sistema
+    const num = getWhatsAppNumber();
+    return num ? `https://wa.me/${num}` : '';
+}
+
+function getInstagramLink() {
+    const ig = String(state.settings.instagram || '').trim();
+    if (!ig) return '';
+    if (/^https?:\/\//i.test(ig)) return ig;
+    const username = ig.replace(/^@/, '').replace(/^(www\.)?instagram\.com\//i, '').replace(/\/+$/, '');
+    return username ? `https://instagram.com/${username}` : '';
+}
+
+function openWhatsAppWithMessage(message) {
+    const num = getWhatsAppNumber();
+    if (!num) {
+        showToast('La tienda todavía no cargó su número de WhatsApp.', 'warning');
+        return;
+    }
+    window.open(`https://wa.me/${num}?text=${encodeURIComponent(message)}`, '_blank');
+}
+
+function setRowText(rowId, textId, value) {
+    const row = document.getElementById(rowId);
+    const textEl = document.getElementById(textId);
+    const text = (value || '').toString().trim();
+    if (textEl) textEl.textContent = text;
+    if (row) row.hidden = !text;
+}
+
+function setLink(linkId, href) {
+    const link = document.getElementById(linkId);
+    if (!link) return;
+    if (href) {
+        link.href = href;
+        link.hidden = false;
+    } else {
+        link.removeAttribute('href');
+        link.hidden = true;
+    }
+}
+
 function applySettingsToUI() {
     const s = state.settings;
-    if (s.storeAddress) {
-        const addrEl = document.getElementById('footer-address');
-        if (addrEl) addrEl.textContent = s.storeAddress;
-    }
-    if (s.storePhone) {
-        const phoneEl = document.getElementById('footer-phone');
-        if (phoneEl) phoneEl.textContent = s.storePhone;
-    }
-    if (s.openingHours) {
-        const hoursEl = document.getElementById('footer-hours');
-        if (hoursEl) hoursEl.textContent = s.openingHours;
-    }
-    if (s.whatsapp) {
-        const waLink = document.getElementById('footer-whatsapp-link');
-        if (waLink) {
-            const wa = String(s.whatsapp).trim();
-            if (wa.startsWith('http://') || wa.startsWith('https://')) {
-                waLink.href = wa;
-            } else {
-                const cleanNum = wa.replace(/[^0-9]/g, '');
-                if (cleanNum) waLink.href = `https://wa.me/${cleanNum}`;
-            }
-        }
-    }
-    if (s.instagram) {
-        const igLink = document.getElementById('footer-instagram-link');
-        if (igLink) {
-            const ig = String(s.instagram).trim();
-            if (ig.startsWith('http://') || ig.startsWith('https://')) {
-                igLink.href = ig;
-            } else {
-                const username = ig.replace(/^@/, '');
-                if (username) igLink.href = `https://instagram.com/${username}`;
-            }
-        }
-    }
-    if (s.storeHolder) {
-        const holderEl = document.getElementById('modal-display-holder');
-        if (holderEl) holderEl.textContent = s.storeHolder;
-    }
-    if (s.storeAlias) {
-        const aliasEl = document.getElementById('modal-display-alias');
-        if (aliasEl) aliasEl.textContent = s.storeAlias;
-    }
+
+    // Contacto & Ubicación (fila oculta si el dato está vacío en el sistema)
+    setRowText('footer-address-row', 'footer-address', s.storeAddress);
+    setRowText('footer-phone-row', 'footer-phone', s.storePhone);
+    setRowText('footer-hours-row', 'footer-hours', s.openingHours);
+
+    // Canales oficiales
+    setLink('footer-whatsapp-link', getWhatsAppLink());
+    setLink('footer-instagram-link', getInstagramLink());
+
+    // Descripción de marca
+    const bioEl = document.getElementById('footer-bio');
+    if (bioEl && s.brandDescription) bioEl.textContent = s.brandDescription;
+
+    // Datos de transferencia
+    const holderEl = document.getElementById('modal-display-holder');
+    if (holderEl) holderEl.textContent = s.storeHolder || '—';
+    const aliasEl = document.getElementById('modal-display-alias');
+    if (aliasEl) aliasEl.textContent = s.storeAlias || 'Consultar por WhatsApp';
+    const copyBtn = document.getElementById('modal-copy-alias-btn');
+    if (copyBtn) copyBtn.hidden = !s.storeAlias;
+}
+
+/* ==========================================================================
+   VARIANTES (TALLE / COLOR) — vienen del sistema en product.variants
+   [{ id, size, color, stock }]; product.stock es la suma de todas.
+   ========================================================================== */
+function productHasVariants(product) {
+    return !!(product && Array.isArray(product.variants) && product.variants.length > 0);
+}
+
+function variantField(v, key) {
+    return ((v && v[key]) || '').toString().trim();
+}
+
+function getVariantLabel(v) {
+    return [variantField(v, 'size'), variantField(v, 'color')].filter(Boolean).join(' / ') || 'Única';
+}
+
+function uniqueVariantValues(product, key) {
+    const seen = [];
+    (product.variants || []).forEach(v => {
+        const val = variantField(v, key);
+        if (val && !seen.includes(val)) seen.push(val);
+    });
+    return seen;
+}
+
+function variantStock(v) {
+    return Math.max(0, parseInt(v && v.stock, 10) || 0);
+}
+
+function findVariantBySelection(product, size, color) {
+    if (!productHasVariants(product)) return null;
+    return product.variants.find(v => variantField(v, 'size') === size && variantField(v, 'color') === color) || null;
+}
+
+function getCartKey(item) {
+    return item.key || (item.product && item.product.id) || '';
 }
 
 /* ==========================================================================
@@ -388,6 +517,23 @@ function renderCatalog(itemsToRender = null) {
         const wholesalePrice = parseFloat(product.priceWholesale !== undefined ? product.priceWholesale : product.priceDiscount) || 0;
         const hasWholesale = wholesalePrice > 0 && wholesalePrice < product.price;
 
+        // Resumen de talles / colores disponibles
+        const hasVariants = productHasVariants(product);
+        let variantsLine = '';
+        if (hasVariants) {
+            const inStock = product.variants.filter(v => variantStock(v) > 0);
+            const sizes = uniqueVariantValues({ variants: inStock }, 'size');
+            const colors = uniqueVariantValues({ variants: inStock }, 'color');
+            const parts = [];
+            if (sizes.length) parts.push(`Talles: ${sizes.join(' · ')}`);
+            if (colors.length) parts.push(colors.length === 1 ? `Color: ${colors[0]}` : `${colors.length} colores`);
+            if (parts.length) variantsLine = `<span class="card-variants-line" title="${escapeAttr(parts.join(' | '))}">${escapeAttr(parts.join(' | '))}</span>`;
+        }
+        // Con talles/colores, "Agregar" abre el detalle para elegir la combinación
+        const addAction = hasVariants
+            ? `openProductModal('${product.id}')`
+            : `addToCart('${product.id}', event)`;
+
         return `
             <div class="product-card ${isOutOfStock ? 'is-out-of-stock' : ''}" onclick="openProductModal('${product.id}')">
                 <div class="card-top">
@@ -404,6 +550,7 @@ function renderCatalog(itemsToRender = null) {
                     </div>
 
                     <h3 class="card-product-title" title="${escapeAttr(product.name)}">${product.name}</h3>
+                    ${variantsLine}
 
                     <div class="card-pricing-area">
                         <span class="card-price-main">${currency}${formatMoney(product.price)}</span>
@@ -417,9 +564,9 @@ function renderCatalog(itemsToRender = null) {
 
                     <div class="card-actions-grid" onclick="event.stopPropagation()">
                         ${!isOutOfStock ? `
-                            <button class="btn-card-add" onclick="addToCart('${product.id}', event)">
-                                <i data-lucide="plus"></i>
-                                <span>Agregar</span>
+                            <button class="btn-card-add" onclick="${addAction}">
+                                <i data-lucide="${hasVariants ? 'shirt' : 'plus'}"></i>
+                                <span>${hasVariants ? (uniqueVariantValues(product, 'size').length ? 'Elegir talle' : 'Elegir color') : 'Agregar'}</span>
                             </button>
                         ` : `
                             <button class="btn-card-add" onclick="askProductDirect('${product.id}', event)">
@@ -491,6 +638,16 @@ window.openProductModal = function(productId) {
 
     modalCurrentProduct = product;
     modalSelectedQty = 1;
+    modalSelection = { size: '', color: '' };
+
+    // Preseleccionar si solo hay una opción con stock en cada dimensión
+    if (productHasVariants(product)) {
+        const available = product.variants.filter(v => variantStock(v) > 0);
+        const sizes = uniqueVariantValues({ variants: available }, 'size');
+        const colors = uniqueVariantValues({ variants: available }, 'color');
+        if (sizes.length === 1) modalSelection.size = sizes[0];
+        if (colors.length === 1) modalSelection.color = colors[0];
+    }
 
     const currency = state.settings.currency || '$';
 
@@ -498,20 +655,6 @@ window.openProductModal = function(productId) {
     document.getElementById('modal-product-sku').textContent = `SKU: ${product.sku || 'N/A'}`;
     document.getElementById('modal-product-title').textContent = product.name;
     document.getElementById('modal-product-price').textContent = `${currency}${formatMoney(product.price)}`;
-
-    // Stock Specs
-    const stockStatusEl = document.getElementById('modal-product-stock-status');
-    const stockQtyEl = document.getElementById('modal-product-stock-qty');
-
-    if (product.stock > 0) {
-        stockStatusEl.textContent = 'Disponible en Local';
-        stockStatusEl.style.color = 'var(--color-success)';
-        stockQtyEl.textContent = `${product.stock} unidades`;
-    } else {
-        stockStatusEl.textContent = 'Sin Stock Inmediato (Consultar)';
-        stockStatusEl.style.color = 'var(--text-muted)';
-        stockQtyEl.textContent = '0 unidades';
-    }
 
     // Wholesale Box
     const wholesaleBox = document.getElementById('modal-wholesale-box');
@@ -543,18 +686,137 @@ window.openProductModal = function(productId) {
         imgContainer.innerHTML = getCategoryPlaceholder(product.category);
     }
 
-    // Actions in Modal
+    renderModalPurchaseArea();
+
+    document.getElementById('modal-product-detail').classList.add('active');
+};
+
+// Variante elegida en el modal (null si falta elegir talle o color)
+function getModalSelectedVariant() {
+    const product = modalCurrentProduct;
+    if (!productHasVariants(product)) return null;
+    return findVariantBySelection(product, modalSelection.size, modalSelection.color);
+}
+
+// Stock máximo comprable desde el modal
+function getModalMaxStock() {
+    const product = modalCurrentProduct;
+    if (!product) return 0;
+    if (!productHasVariants(product)) return Math.max(0, product.stock || 0);
+    const variant = getModalSelectedVariant();
+    return variant ? variantStock(variant) : 0;
+}
+
+// ¿Existe alguna combinación con stock para este valor? (Si no combina con lo ya elegido,
+// al tocarlo se limpia la otra selección, así el cliente puede cambiar directo de opción.)
+function isVariantOptionAvailable(product, key, value) {
+    return product.variants.some(v => variantField(v, key) === value && variantStock(v) > 0);
+}
+
+window.selectModalVariantOption = function(key, value) {
+    const product = modalCurrentProduct;
+    if (!productHasVariants(product)) return;
+    if (modalSelection[key] === value) return; // ya elegido
+    modalSelection[key] = value;
+
+    // Si la combinación con la otra dimensión no tiene stock, limpiar la otra
+    const otherKey = key === 'size' ? 'color' : 'size';
+    if (modalSelection[key] && modalSelection[otherKey]) {
+        const combo = findVariantBySelection(product, modalSelection.size, modalSelection.color);
+        if (!combo || variantStock(combo) <= 0) modalSelection[otherKey] = '';
+    }
+    // Si para lo elegido queda una sola opción con stock en la otra dimensión, elegirla
+    if (modalSelection[key] && !modalSelection[otherKey]) {
+        const remaining = uniqueVariantValues({
+            variants: product.variants.filter(v => variantField(v, key) === modalSelection[key] && variantStock(v) > 0)
+        }, otherKey);
+        if (remaining.length === 1) modalSelection[otherKey] = remaining[0];
+    }
+    modalSelectedQty = 1;
+    renderModalPurchaseArea();
+};
+
+function renderModalVariantPicker() {
+    const box = document.getElementById('modal-variant-picker');
+    if (!box) return;
+    const product = modalCurrentProduct;
+    if (!productHasVariants(product)) {
+        box.hidden = true;
+        box.innerHTML = '';
+        return;
+    }
+
+    const sizes = uniqueVariantValues(product, 'size');
+    const colors = uniqueVariantValues(product, 'color');
+
+    const group = (key, label, values) => {
+        if (!values.length) return '';
+        const chips = values.map(val => {
+            const available = isVariantOptionAvailable(product, key, val);
+            const active = modalSelection[key] === val;
+            return `<button type="button" class="variant-chip ${active ? 'active' : ''}" ${available || active ? '' : 'disabled'}
+                        data-key="${key}" data-value="${escapeAttr(val)}"
+                        onclick="selectModalVariantOption(this.dataset.key, this.dataset.value)">${escapeAttr(val)}</button>`;
+        }).join('');
+        const chosen = modalSelection[key] ? `<strong>${escapeAttr(modalSelection[key])}</strong>` : '';
+        return `
+            <div>
+                <span class="variant-group-label">${label}${chosen}</span>
+                <div class="variant-chip-row">${chips}</div>
+            </div>`;
+    };
+
+    const needSize = sizes.length > 0 && !modalSelection.size;
+    const needColor = colors.length > 0 && !modalSelection.color;
+    let hint = '';
+    if (product.stock > 0 && (needSize || needColor)) {
+        hint = `<span class="variant-hint">Elegí ${needSize && needColor ? 'talle y color' : (needSize ? 'un talle' : 'un color')} para agregar al pedido.</span>`;
+    }
+
+    box.innerHTML = group('size', 'Talle', sizes) + group('color', 'Color', colors) + hint;
+    box.hidden = false;
+}
+
+function renderModalPurchaseArea() {
+    const product = modalCurrentProduct;
+    if (!product) return;
+
+    renderModalVariantPicker();
+
+    const hasVariants = productHasVariants(product);
+    const variant = getModalSelectedVariant();
+    const stockStatusEl = document.getElementById('modal-product-stock-status');
+    const stockQtyEl = document.getElementById('modal-product-stock-qty');
     const actionRow = document.getElementById('modal-action-row');
+
+    // Stock Specs
+    if (product.stock <= 0) {
+        stockStatusEl.textContent = 'Sin Stock Inmediato (Consultar)';
+        stockStatusEl.style.color = 'var(--text-muted)';
+        stockQtyEl.textContent = '0 unidades';
+    } else if (hasVariants && !variant) {
+        stockStatusEl.textContent = 'Disponible en Local';
+        stockStatusEl.style.color = 'var(--color-success)';
+        stockQtyEl.textContent = 'Elegí una opción';
+    } else {
+        const qty = hasVariants ? variantStock(variant) : product.stock;
+        stockStatusEl.textContent = qty > 0 ? 'Disponible en Local' : 'Sin stock en esta opción';
+        stockStatusEl.style.color = qty > 0 ? 'var(--color-success)' : 'var(--text-muted)';
+        stockQtyEl.textContent = `${qty} unidades${hasVariants ? ` (${getVariantLabel(variant)})` : ''}`;
+    }
+
+    // Actions in Modal
     if (product.stock > 0) {
+        const canAdd = !hasVariants || (variant && variantStock(variant) > 0);
         actionRow.innerHTML = `
             <div class="qty-control-box" style="height: 44px;">
-                <button class="qty-btn" onclick="modifyModalQty(-1)" aria-label="Disminuir"><i data-lucide="minus"></i></button>
-                <span class="qty-val" id="modal-qty-display">1</span>
-                <button class="qty-btn" onclick="modifyModalQty(1)" aria-label="Aumentar"><i data-lucide="plus"></i></button>
+                <button class="qty-btn" onclick="modifyModalQty(-1)" aria-label="Disminuir" ${canAdd ? '' : 'disabled'}><i data-lucide="minus"></i></button>
+                <span class="qty-val" id="modal-qty-display">${modalSelectedQty}</span>
+                <button class="qty-btn" onclick="modifyModalQty(1)" aria-label="Aumentar" ${canAdd ? '' : 'disabled'}><i data-lucide="plus"></i></button>
             </div>
-            <button class="btn btn-primary" style="flex: 1;" onclick="addModalProductToCart()">
+            <button class="btn btn-primary" style="flex: 1;" onclick="addModalProductToCart()" ${canAdd ? '' : 'disabled'}>
                 <i data-lucide="shopping-bag"></i>
-                <span>Agregar al Pedido</span>
+                <span>${canAdd ? 'Agregar al Pedido' : 'Elegí talle / color'}</span>
             </button>
         `;
     } else {
@@ -566,14 +828,13 @@ window.openProductModal = function(productId) {
         `;
     }
 
-    document.getElementById('modal-product-detail').classList.add('active');
     if (window.lucide) lucide.createIcons();
-};
+}
 
 window.modifyModalQty = function(delta) {
     if (!modalCurrentProduct) return;
     const newQty = modalSelectedQty + delta;
-    if (newQty >= 1 && newQty <= modalCurrentProduct.stock) {
+    if (newQty >= 1 && newQty <= getModalMaxStock()) {
         modalSelectedQty = newQty;
         const display = document.getElementById('modal-qty-display');
         if (display) display.textContent = modalSelectedQty;
@@ -582,7 +843,16 @@ window.modifyModalQty = function(delta) {
 
 window.addModalProductToCart = function() {
     if (!modalCurrentProduct) return;
-    addToCart(modalCurrentProduct.id, null, modalSelectedQty);
+    if (productHasVariants(modalCurrentProduct)) {
+        const variant = getModalSelectedVariant();
+        if (!variant) {
+            showToast('Elegí talle y color antes de agregar', 'warning');
+            return;
+        }
+        addToCart(modalCurrentProduct.id, null, modalSelectedQty, variant.id);
+    } else {
+        addToCart(modalCurrentProduct.id, null, modalSelectedQty);
+    }
     closeProductModal();
 };
 
@@ -593,7 +863,7 @@ window.closeProductModal = function() {
 /* ==========================================================================
    CART OPERATIONS
    ========================================================================== */
-window.addToCart = function(productId, event, qtyToAdd = 1) {
+window.addToCart = function(productId, event, qtyToAdd = 1, variantId = null) {
     if (event) {
         event.stopPropagation();
     }
@@ -601,29 +871,52 @@ window.addToCart = function(productId, event, qtyToAdd = 1) {
     const product = state.products.find(p => p.id === productId);
     if (!product || product.stock <= 0) return;
 
-    const existing = state.cart.find(item => item.product.id === productId);
+    // Producto con talles/colores: hay que elegir la combinación en el detalle
+    let variant = null;
+    if (productHasVariants(product)) {
+        variant = product.variants.find(v => v.id === variantId) || null;
+        if (!variant) {
+            openProductModal(productId);
+            return;
+        }
+    }
+
+    const maxStock = variant ? variantStock(variant) : product.stock;
+    if (maxStock <= 0) return;
+    const key = variant ? `${product.id}::${variant.id}` : product.id;
+    const displayName = variant ? `${product.name} (${getVariantLabel(variant)})` : product.name;
+
+    const existing = state.cart.find(item => getCartKey(item) === key);
 
     if (existing) {
         const potential = existing.qty + qtyToAdd;
-        if (potential <= product.stock) {
+        if (potential <= maxStock) {
             existing.qty = potential;
-            showToast(`¡Se sumaron +${qtyToAdd} u. de ${product.name}!`, 'success');
+            showToast(`¡Se sumaron +${qtyToAdd} u. de ${displayName}!`, 'success');
         } else {
-            const addable = product.stock - existing.qty;
+            const addable = maxStock - existing.qty;
             if (addable > 0) {
-                existing.qty = product.stock;
+                existing.qty = maxStock;
                 showToast(`Se agregaron las últimas ${addable} u. disponibles.`, 'warning');
             } else {
-                showToast(`Ya tienes el stock máximo disponible (${product.stock} u.)`, 'warning');
+                showToast(`Ya tienes el stock máximo disponible (${maxStock} u.)`, 'warning');
             }
         }
     } else {
-        const initial = Math.min(qtyToAdd, product.stock);
-        state.cart.push({
+        const initial = Math.min(qtyToAdd, maxStock);
+        const line = {
+            key,
             product: product,
             qty: initial
-        });
-        showToast(`¡${product.name} agregado a tu pedido!`, 'success');
+        };
+        if (variant) {
+            line.variantId = variant.id;
+            line.variantLabel = getVariantLabel(variant);
+            line.size = variantField(variant, 'size');
+            line.color = variantField(variant, 'color');
+        }
+        state.cart.push(line);
+        showToast(`¡${displayName} agregado a tu pedido!`, 'success');
     }
 
     saveCartToSession();
@@ -637,24 +930,33 @@ window.addToCart = function(productId, event, qtyToAdd = 1) {
     }
 };
 
-window.changeCartQty = function(productId, delta) {
-    const item = state.cart.find(i => i.product.id === productId);
+function getCartItemMaxStock(item) {
+    if (item.variantId && productHasVariants(item.product)) {
+        const v = item.product.variants.find(x => x.id === item.variantId);
+        return v ? variantStock(v) : 0;
+    }
+    return item.product.stock;
+}
+
+window.changeCartQty = function(key, delta) {
+    const item = state.cart.find(i => getCartKey(i) === key);
     if (!item) return;
 
+    const maxStock = getCartItemMaxStock(item);
     const newQty = item.qty + delta;
     if (newQty <= 0) {
-        removeFromCart(productId);
-    } else if (newQty <= item.product.stock) {
+        removeFromCart(key);
+    } else if (newQty <= maxStock) {
         item.qty = newQty;
         saveCartToSession();
         updateCartUI();
     } else {
-        showToast(`Límite de stock alcanzado (${item.product.stock} u.)`, 'warning');
+        showToast(`Límite de stock alcanzado (${maxStock} u.)`, 'warning');
     }
 };
 
-window.removeFromCart = function(productId) {
-    state.cart = state.cart.filter(i => i.product.id !== productId);
+window.removeFromCart = function(key) {
+    state.cart = state.cart.filter(i => getCartKey(i) !== key);
     saveCartToSession();
     updateCartUI();
     showToast('Producto eliminado del pedido', 'info');
@@ -715,6 +1017,7 @@ function updateCartUI() {
 
                 <div class="cart-item-info">
                     <h4 class="cart-item-name">${item.product.name}</h4>
+                    ${item.variantId ? `<span class="cart-item-variant">${escapeAttr([item.size ? `Talle ${item.size}` : '', item.color || ''].filter(Boolean).join(' · ') || item.variantLabel || '')}</span>` : ''}
                     <span class="cart-item-sku">SKU: ${item.product.sku || 'N/A'}</span>
                     <span class="cart-item-price-unit">
                         ${currency}${formatMoney(unitPrice)} c/u
@@ -723,13 +1026,13 @@ function updateCartUI() {
                 </div>
 
                 <div class="cart-item-actions">
-                    <button class="btn-remove-item" onclick="removeFromCart('${item.product.id}')" title="Eliminar del pedido">
+                    <button class="btn-remove-item" onclick="removeFromCart('${escapeAttr(getCartKey(item))}')" title="Eliminar del pedido">
                         <i data-lucide="trash-2" style="width: 15px; height: 15px;"></i>
                     </button>
                     <div class="qty-control-box">
-                        <button class="qty-btn" onclick="changeCartQty('${item.product.id}', -1)" aria-label="Menos"><i data-lucide="minus"></i></button>
+                        <button class="qty-btn" onclick="changeCartQty('${escapeAttr(getCartKey(item))}', -1)" aria-label="Menos"><i data-lucide="minus"></i></button>
                         <span class="qty-val">${item.qty}</span>
-                        <button class="qty-btn" onclick="changeCartQty('${item.product.id}', 1)" aria-label="Más"><i data-lucide="plus"></i></button>
+                        <button class="qty-btn" onclick="changeCartQty('${escapeAttr(getCartKey(item))}', 1)" aria-label="Más"><i data-lucide="plus"></i></button>
                     </div>
                 </div>
             </div>
@@ -779,6 +1082,12 @@ window.checkoutWhatsApp = function() {
 
         const wsTag = isWholesaleActive ? ' _[Precio Mayorista]_' : '';
         message += `${index + 1}. *${item.qty}x* ${item.product.name}\n`;
+        if (item.variantId) {
+            const parts = [];
+            if (item.size) parts.push(`Talle: *${item.size}*`);
+            if (item.color) parts.push(`Color: *${item.color}*`);
+            message += `   • ${parts.length ? parts.join(' · ') : `Variante: *${item.variantLabel || ''}*`}\n`;
+        }
         message += `   • SKU: \`${item.product.sku || 'N/A'}\`\n`;
         message += `   • Unitario: ${currency}${formatMoney(unitPrice)}${wsTag}\n`;
         message += `   • Subtotal: *${currency}${formatMoney(lineTotal)}*\n\n`;
@@ -790,18 +1099,18 @@ window.checkoutWhatsApp = function() {
     message += `----------------------------------------\n`;
     message += `💳 *Método de Pago Preferido:* ${payText}\n`;
     if (isQR) {
-        message += `📍 *Alias de Pago:* \`${state.settings.storeAlias || 'HDRACING.OFICIAL'}\`\n`;
-        message += `👤 *Titular:* ${state.settings.storeHolder || 'HD RACING S.R.L.'}\n`;
+        if (state.settings.storeAlias) {
+            message += `📍 *Alias de Pago:* \`${state.settings.storeAlias}\`\n`;
+            if (state.settings.storeHolder) message += `👤 *Titular:* ${state.settings.storeHolder}\n`;
+        } else {
+            message += `📍 _Por favor, envíenme los datos para la transferencia._\n`;
+        }
     }
     message += `💰 *TOTAL ESTIMADO:* *${currency}${formatMoney(total)}*\n\n`;
     message += `¿Tienen stock disponible para confirmar o pasar a retirar? ¡Muchas gracias!\n`;
     message += `📱 _Enviado desde el catálogo web oficial de HD Racing_`;
 
-    const encoded = encodeURIComponent(message);
-    const cleanPhone = (state.settings.whatsapp || '+5493795331132').replace(/[^0-9]/g, '');
-    const waUrl = `https://wa.me/${cleanPhone}?text=${encoded}`;
-
-    window.open(waUrl, '_blank');
+    openWhatsAppWithMessage(message);
 };
 
 window.askProductDirect = function(productId, event) {
@@ -826,11 +1135,7 @@ window.askProductDirect = function(productId, event) {
         message += `✅ _Consulto disponibilidad en local para coordinar retiro o compra._\n`;
     }
 
-    const encoded = encodeURIComponent(message);
-    const cleanPhone = (state.settings.whatsapp || '+5493795331132').replace(/[^0-9]/g, '');
-    const waUrl = `https://wa.me/${cleanPhone}?text=${encoded}`;
-
-    window.open(waUrl, '_blank');
+    openWhatsAppWithMessage(message);
 };
 
 /* ==========================================================================
@@ -863,7 +1168,11 @@ window.closeQRModal = function() {
 };
 
 window.copyModalAlias = function() {
-    const alias = state.settings.storeAlias || 'HDRACING.OFICIAL';
+    const alias = state.settings.storeAlias || '';
+    if (!alias) {
+        showToast('Pedinos los datos de transferencia por WhatsApp', 'info');
+        return;
+    }
     navigator.clipboard.writeText(alias).then(() => {
         const textSpan = document.getElementById('modal-copy-alias-text');
         if (textSpan) textSpan.textContent = '¡Copiado!';

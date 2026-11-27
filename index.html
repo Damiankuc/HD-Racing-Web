@@ -22,7 +22,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     
     <!-- Core Stylesheet -->
-    <link rel="stylesheet" href="style.css?v=1.0.0">
+    <link rel="stylesheet" href="style.css?v=1.2.0">
 </head>
 <body>
 
@@ -52,7 +52,7 @@
             </nav>
             
             <div class="header-actions">
-                <div class="store-status-pill">
+                <div class="store-status-pill" hidden>
                     <span class="pulse-dot"></span>
                     <span class="status-text">Abierto</span>
                 </div>
@@ -327,13 +327,13 @@
                 <div class="transfer-data-box">
                     <div class="data-item">
                         <span class="data-item-label">Titular de la Cuenta</span>
-                        <strong class="data-item-value" id="modal-display-holder">HD RACING S.R.L.</strong>
+                        <strong class="data-item-value" id="modal-display-holder">—</strong>
                     </div>
 
                     <div class="data-item alias-highlight-item">
                         <span class="data-item-label">Alias de Pago (CBU / CVU)</span>
                         <div class="alias-copy-row">
-                            <span class="alias-code" id="modal-display-alias">HDRACING.OFICIAL</span>
+                            <span class="alias-code" id="modal-display-alias">Consultar por WhatsApp</span>
                             <button type="button" class="btn btn-copy" id="modal-copy-alias-btn" onclick="copyModalAlias()">
                                 <i data-lucide="copy"></i>
                                 <span id="modal-copy-alias-text">Copiar</span>
@@ -391,6 +391,10 @@
                         </div>
                     </div>
                     
+                    <div class="variant-picker" id="modal-variant-picker" hidden>
+                        <!-- Selector de talle / color (se completa si el producto tiene variantes) -->
+                    </div>
+
                     <div class="product-specs-list">
                         <div class="spec-tile">
                             <span class="spec-label">Disponibilidad</span>
@@ -434,7 +438,7 @@
                         <span class="pulse-dot"></span>
                         DISCIPLINA · MOTOR · LIBERTAD · PASIÓN
                     </p>
-                    <p class="footer-bio">
+                    <p class="footer-bio" id="footer-bio">
                         Tu tienda de referencia en motos, indumentaria y accesorios de competición. 
                         Asesoramiento personalizado, componentes de máxima resistencia y repuestos oficiales.
                     </p>
@@ -443,17 +447,18 @@
                 <div class="footer-info-col">
                     <h4 class="footer-heading">Contacto & Ubicación</h4>
                     <ul class="footer-contact-list">
-                        <li>
+                        <!-- Datos cargados desde Configuración del sistema; las filas vacías se ocultan -->
+                        <li id="footer-address-row" hidden>
                             <i data-lucide="map-pin"></i>
-                            <span id="footer-address">Av. Independencia 3420, Corrientes Capital, Argentina</span>
+                            <span id="footer-address"></span>
                         </li>
-                        <li>
+                        <li id="footer-phone-row" hidden>
                             <i data-lucide="phone"></i>
-                            <span id="footer-phone">+54 9 379 533-1132</span>
+                            <span id="footer-phone"></span>
                         </li>
-                        <li>
+                        <li id="footer-hours-row" hidden>
                             <i data-lucide="clock"></i>
-                            <span id="footer-hours">Lunes a Sábado: 08:30 a 13:00 y 16:30 a 20:30 hs</span>
+                            <span id="footer-hours"></span>
                         </li>
                     </ul>
                 </div>
@@ -462,11 +467,11 @@
                     <h4 class="footer-heading">Canales Oficiales</h4>
                     <p class="footer-sub-text">Seguinos en nuestras redes o escribinos directamente:</p>
                     <div class="footer-social-row">
-                        <a id="footer-whatsapp-link" href="https://wa.me/5493795331132" target="_blank" rel="noopener" class="social-btn whatsapp-btn" title="Escribir por WhatsApp">
+                        <a id="footer-whatsapp-link" href="#" hidden target="_blank" rel="noopener" class="social-btn whatsapp-btn" title="Escribir por WhatsApp">
                             <i data-lucide="message-circle"></i>
                             <span>WhatsApp</span>
                         </a>
-                        <a id="footer-instagram-link" href="https://instagram.com/hdracing" target="_blank" rel="noopener" class="social-btn" title="Seguir en Instagram">
+                        <a id="footer-instagram-link" href="#" hidden target="_blank" rel="noopener" class="social-btn" title="Seguir en Instagram">
                             <i data-lucide="instagram"></i>
                             <span>Instagram</span>
                         </a>
@@ -496,6 +501,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <!-- Application Logic -->
-    <script src="app.js?v=1.1.0"></script>
+    <script src="app.js?v=1.2.0"></script>
 </body>
 </html>
